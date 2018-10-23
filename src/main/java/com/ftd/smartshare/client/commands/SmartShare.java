@@ -12,7 +12,7 @@ import picocli.CommandLine;
         version = "v1.0",
         customSynopsis = {
                 "\nsmartshare [-hV] [COMMAND]",
-                "smartshare [upload|u] <file> [password]",
+                "smartshare [upload|u] <file> [password] [expiration] [maxDownloads]",
                 "smartshare [download|d] <file> <password>\n"
         },
         subcommands = {
