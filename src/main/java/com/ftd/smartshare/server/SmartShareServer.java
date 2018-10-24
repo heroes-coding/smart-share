@@ -1,9 +1,12 @@
 package com.ftd.smartshare.server;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.net.ServerSocket;
@@ -15,6 +18,7 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
 import com.ftd.smartshare.dto.DownloadRequestDto;
+import com.ftd.smartshare.dto.FileDto;
 import com.ftd.smartshare.dto.UploadRequestDto;
 
 import dao.FileDao;
@@ -24,8 +28,9 @@ public class SmartShareServer {
 	public static void main(String[] args) {
 		try (ServerSocket server = new ServerSocket(6770);) {
 			
-			JAXBContext context = JAXBContext.newInstance(UploadRequestDto.class, DownloadRequestDto.class);
+			JAXBContext context = JAXBContext.newInstance(FileDto.class, UploadRequestDto.class, DownloadRequestDto.class);
 			Unmarshaller unmarshaller = context.createUnmarshaller();
+			Marshaller marshaller = context.createMarshaller();
 
 			while (true) {
 				
@@ -38,30 +43,35 @@ public class SmartShareServer {
 					// Start serverSocket and listen for connections
 
 					// Create buffered reader and string reader to read a request from a client
-					
-					Object request = (Object) unmarshaller.unmarshal(in);
-
+	                StringReader stringReader = new StringReader(in.readLine());
+					Object request = (Object) unmarshaller.unmarshal(stringReader);
+					FileDao fileDao = new FileDao();
 					
 					if (request instanceof DownloadRequestDto) {
-						System.out.println("Got a download request!");
 						DownloadRequestDto downloadRequest = (DownloadRequestDto) request;
-						System.out.println(downloadRequest);
+						System.out.printf("Got a download request for %s!\n", downloadRequest.getFile_name());
+						FileDto fileDto = fileDao.getFileDto(downloadRequest);
+						marshaller.marshal(fileDto, out);
 					}
 						
 					if (request instanceof UploadRequestDto) {
-						System.out.println("Got an upload request!");
 						UploadRequestDto uploadRequest = (UploadRequestDto) request;
+						System.out.printf("Got an upload request for %s!\n", uploadRequest.getFile_name());
 						
 						// Now get the file data access object and save it
-						FileDao fileDao = new FileDao();
+						
 						String result = fileDao.addFile(uploadRequest);
-						// out.write(result);
+						out.write(result);
 
 					}
 					
 					
 					
-				} catch (IOException | JAXBException e) {
+				} catch (JAXBException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 

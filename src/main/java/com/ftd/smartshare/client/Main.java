@@ -7,15 +7,15 @@ class Main {
 
     public static void main(String[] args) {
  //       CommandLine.run(new SmartShare()); // Pass cli arguments here
-    	CommandLine.run(new SmartShare(), "upload", "test.txt", "passworde", "-e", "590", "-m", "3");
+//    	CommandLine.run(new SmartShare(), "upload", "test.txt", "passworde", "-e", "590", "-m", "3");
       // CommandLine.run(new SmartShare(), "-h");
-//        CommandLine.run(new SmartShare(), "--version");
+ //       CommandLine.run(new SmartShare(), "--version");
 //        CommandLine.run(new SmartShare(), "upload");
 //        CommandLine.run(new SmartShare(), "upload", "pom.xml");
 //        CommandLine.run(new SmartShare(), "upload", ".gitignore");
 
- //       CommandLine.run(new SmartShare(), "upload", "test.txt", "passworde", "590", "3");
-//        CommandLine.run(new SmartShare(), "download", "pom.xml", "password");
+ //      CommandLine.run(new SmartShare(), "upload", "pom.xml", "password");
+ //       CommandLine.run(new SmartShare(), "download", "pom.xml", "password");
     }
 
 }

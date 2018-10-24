@@ -6,8 +6,10 @@ import com.ftd.smartshare.utils.PasswordGenerator;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -15,12 +17,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.net.Socket;
 import java.util.Arrays;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 
 @CommandLine.Command(description = "Uploads file using a given 'password', expiration (60 minutes by default), a max downloads (1 by default)", name = "upload", aliases = "u", mixinStandardHelpOptions = true)
 public class Upload implements Runnable {
@@ -39,30 +43,38 @@ public class Upload implements Runnable {
 	private int maxDownloads = Integer.MAX_VALUE;
 
 	public void run() {
-		System.out.println("Uploading: " + file.getAbsolutePath());
+		System.out.println("Trying to upload: " + file.getAbsolutePath());
 		try (
 			InputStream fileIn = new FileInputStream(file);
 			Socket server = new Socket("localhost", 6770);
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(server.getOutputStream()));
 			BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()));
+
 				) {
 			byte[] bytes = new byte[fileIn.available()];
 			fileIn.read(bytes);
 			UploadRequestDto uploadDto = new UploadRequestDto(this.file.getName(), this.password, bytes,
 					this.expiration, this.maxDownloads);
 
-			System.out.println(uploadDto);
 			// Marshal request to stringWriter
 			JAXBContext context = JAXBContext.newInstance(UploadRequestDto.class);
 			Marshaller marshaller = context.createMarshaller();
-			marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-			marshaller.marshal(uploadDto, out);
+			StringWriter stringWriter = new StringWriter();
+			marshaller.marshal(uploadDto, stringWriter);
+			out.write(stringWriter.toString());
+			out.newLine();
+			out.flush();
 
-			/*
+
 			String result = in.readLine();
-			System.out.println(result);
-			in.close();
-			*/
+			if (!result.contains("already exists")) {
+				System.out.printf("Your password for %s is: \n",file.getName());
+				System.out.println(this.password);
+			} else {
+				System.out.println(result);
+			}
+			
+
 			
 
 		} catch (FileNotFoundException e) {
@@ -79,7 +91,7 @@ public class Upload implements Runnable {
 	}
 
 	public static void main(String[] args) {
-		CommandLine.run(new SmartShare(), "upload", "toUpload/test.txt", "passworde");
+		CommandLine.run(new SmartShare(), "upload", "toUpload/test.txt", "poobear", "-m", "2");
 	}
 
 }

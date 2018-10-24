@@ -1,20 +1,26 @@
 package com.ftd.smartshare.client.commands.subcommands;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.sql.Timestamp;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 
 import com.ftd.smartshare.client.commands.SmartShare;
 import com.ftd.smartshare.dto.DownloadRequestDto;
+import com.ftd.smartshare.dto.FileDto;
 import com.ftd.smartshare.dto.UploadRequestDto;
 
+import entity.File;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -36,7 +42,7 @@ public class Download implements Runnable {
 	private boolean summaryOnly = false;
     
     public void run() {
-        System.out.println("Downloading " + fileName);
+        System.out.println((this.summaryOnly ? "Getting file summary for " : "Trying to download ") + fileName + "...");
         DownloadRequestDto downloadRequestDto = new DownloadRequestDto(
         		this.fileName,
         		this.password,
@@ -45,15 +51,36 @@ public class Download implements Runnable {
         
 		JAXBContext context;
 		try (
-				Socket socket = new Socket("localhost", 6770);
-				BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+				Socket server = new Socket("localhost", 6770);
+				BufferedWriter out = new BufferedWriter(new OutputStreamWriter(server.getOutputStream()));
+				BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()));
 			){
-			context = JAXBContext.newInstance(DownloadRequestDto.class);
+			context = JAXBContext.newInstance(DownloadRequestDto.class, FileDto.class);
+			
 			Marshaller marshaller = context.createMarshaller();
-			marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-			marshaller.marshal(downloadRequestDto, out);
+			StringWriter stringWriter = new StringWriter();
+			marshaller.marshal(downloadRequestDto, stringWriter);
+			out.write(stringWriter.toString());
+			out.newLine();
+			out.flush();
 			
+
+			Unmarshaller unmarshaller = context.createUnmarshaller();
+			FileDto fileDto = (FileDto) unmarshaller.unmarshal(in);
 			
+			if (fileDto.getFileName() == null) {
+				System.out.println("Could not get file.");
+			} else if (this.summaryOnly) {
+				System.out.printf("It was created at %s, has %d remaining downloads, and expires in %d minutes\n", 
+					new Timestamp(fileDto.getTimeCreated()), fileDto.getRemainingDownloads(), fileDto.getTimeUntilExpiration());
+			} else {
+				File file = new File(fileDto.getFileName(),fileDto.getFile());
+				file.saveFile("downloads");
+			}
+			
+
+
+
 		} catch (JAXBException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -69,7 +96,7 @@ public class Download implements Runnable {
     }
     
     public static void main(String[] args) {
-    	CommandLine.run(new SmartShare(), "download", "test.txt", "passworde");
+    	CommandLine.run(new SmartShare(), "download", "test.txt", "poobear");
 
 	}
 
