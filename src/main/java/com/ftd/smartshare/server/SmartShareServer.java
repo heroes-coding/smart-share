@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -34,34 +35,23 @@ public class SmartShareServer {
 
 			while (true) {
 				
-				try (
-						Socket client = server.accept();
-						BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-						BufferedWriter out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
-
-						){
+				try {
 					// Start serverSocket and listen for connections
+					Socket client = server.accept();
+					BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
 					// Create buffered reader and string reader to read a request from a client
 	                StringReader stringReader = new StringReader(in.readLine());
 					Object request = (Object) unmarshaller.unmarshal(stringReader);
-					FileDao fileDao = new FileDao();
 					
 					if (request instanceof DownloadRequestDto) {
-						DownloadRequestDto downloadRequest = (DownloadRequestDto) request;
-						System.out.printf("Got a download request for %s!\n", downloadRequest.getFile_name());
-						FileDto fileDto = fileDao.getFileDto(downloadRequest);
-						marshaller.marshal(fileDto, out);
+						DownloadHandler downloader = new DownloadHandler(client,request,marshaller);
+						new Thread(downloader).start();
 					}
-						
 					if (request instanceof UploadRequestDto) {
-						UploadRequestDto uploadRequest = (UploadRequestDto) request;
-						System.out.printf("Got an upload request for %s!\n", uploadRequest.getFile_name());
-						
-						// Now get the file data access object and save it
-						
-						String result = fileDao.addFile(uploadRequest);
-						out.write(result);
+						 UploadHandler uploader = new UploadHandler(client, request);
+						 new Thread(uploader).start();
+
 
 					}
 					
