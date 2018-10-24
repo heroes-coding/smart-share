@@ -1,8 +1,10 @@
 package com.ftd.smartshare.server;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -15,6 +17,8 @@ import javax.xml.bind.Unmarshaller;
 import com.ftd.smartshare.dto.DownloadRequestDto;
 import com.ftd.smartshare.dto.UploadRequestDto;
 
+import dao.FileDao;
+
 
 public class SmartShareServer {
 	public static void main(String[] args) {
@@ -25,13 +29,18 @@ public class SmartShareServer {
 
 			while (true) {
 				
-				try {
+				try (
+						Socket client = server.accept();
+						BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+						BufferedWriter out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
+
+						){
 					// Start serverSocket and listen for connections
-					Socket client = server.accept();
-					
+
 					// Create buffered reader and string reader to read a request from a client
-					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
-					Object request = (Object) unmarshaller.unmarshal(bufferedReader);
+					
+					Object request = (Object) unmarshaller.unmarshal(in);
+
 					
 					if (request instanceof DownloadRequestDto) {
 						System.out.println("Got a download request!");
@@ -42,8 +51,16 @@ public class SmartShareServer {
 					if (request instanceof UploadRequestDto) {
 						System.out.println("Got an upload request!");
 						UploadRequestDto uploadRequest = (UploadRequestDto) request;
-						System.out.println(uploadRequest);
+						
+						// Now get the file data access object and save it
+						FileDao fileDao = new FileDao();
+						String result = fileDao.addFile(uploadRequest);
+						// out.write(result);
+
 					}
+					
+					
+					
 				} catch (IOException | JAXBException e) {
 					e.printStackTrace();
 				}

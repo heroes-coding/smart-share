@@ -3,18 +3,18 @@ package com.ftd.smartshare.client.commands.subcommands;
 import com.ftd.smartshare.client.commands.SmartShare;
 import com.ftd.smartshare.dto.UploadRequestDto;
 import com.ftd.smartshare.utils.PasswordGenerator;
-import org.apache.commons.text.RandomStringGenerator;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.StringWriter;
 import java.net.Socket;
 import java.util.Arrays;
 
@@ -42,8 +42,9 @@ public class Upload implements Runnable {
 		System.out.println("Uploading: " + file.getAbsolutePath());
 		try (
 			InputStream fileIn = new FileInputStream(file);
-			Socket socket = new Socket("localhost", 6770);
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			Socket server = new Socket("localhost", 6770);
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(server.getOutputStream()));
+			BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()));
 				) {
 			byte[] bytes = new byte[fileIn.available()];
 			fileIn.read(bytes);
@@ -57,7 +58,12 @@ public class Upload implements Runnable {
 			marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 			marshaller.marshal(uploadDto, out);
 
-
+			/*
+			String result = in.readLine();
+			System.out.println(result);
+			in.close();
+			*/
+			
 
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -73,7 +79,7 @@ public class Upload implements Runnable {
 	}
 
 	public static void main(String[] args) {
-		CommandLine.run(new SmartShare(), "upload", "test.txt", "passworde", "-e", "590", "-m", "3");
+		CommandLine.run(new SmartShare(), "upload", "toUpload/test.txt", "passworde");
 	}
 
 }
