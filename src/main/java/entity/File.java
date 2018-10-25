@@ -12,7 +12,7 @@ public class File {
 	public void saveFile(String relativeDirectory) {
 		try (FileOutputStream out = new FileOutputStream(relativeDirectory + "/" + this.fileName);) {
 			out.write(this.file);
-			System.out.printf("File %s saved successfully to ./%s\n",this.fileName, relativeDirectory);
+			System.out.printf("File %s saved successfully to ./%s\n", this.fileName, relativeDirectory);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

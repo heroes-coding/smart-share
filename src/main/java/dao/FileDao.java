@@ -6,13 +6,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalTime;
 
 import com.ftd.smartshare.dto.DownloadRequestDto;
 import com.ftd.smartshare.dto.FileDto;
+import com.ftd.smartshare.dto.SuccessDto;
 import com.ftd.smartshare.dto.UploadRequestDto;
-
-import entity.File;
 
 public class FileDao {
 	private static final String URL = "jdbc:postgresql://localhost:5432/postgres/public";
@@ -27,7 +25,6 @@ public class FileDao {
 			deleteStatement.setString(1, fileName);
 			deleteStatement.executeUpdate();
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -51,7 +48,6 @@ public class FileDao {
 				}
 			}
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return remainingMillis;
@@ -93,14 +89,9 @@ public class FileDao {
 					remainingDownloads--;
 				}
 
-				file.setFileName(fileName);
-				file.setRemainingDownloads(remainingDownloads);
-				file.setTimeCreated(results.getTimestamp("time_created").getTime());
-				file.setTimeUntilExpiration(remainingMillis / 60000);
-
-				if (remainingDownloads <= 0) {
+				if (remainingDownloads < 0) {
 					deleteFile(fileName, conn);
-					break; // breaks out of while loop which populates the rest of file object
+					return file; // returns empty file
 				} else if (!request.isSummaryOnly()) {
 					file.setFile(results.getBytes("file"));
 					String downsSql = "UPDATE smartshare.files SET total_downloads = (?) WHERE file_name = (?)";
@@ -109,11 +100,17 @@ public class FileDao {
 					downsDecrementer.setString(2, fileName);
 					downsDecrementer.executeUpdate();
 				}
+				
+				file.setFileName(fileName);
+				file.setRemainingDownloads(remainingDownloads);
+				file.setTimeCreated(results.getTimestamp("time_created").getTime());
+				file.setTimeUntilExpiration(1 + remainingMillis / 60000);
+
+				
 
 			}
 
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			if (e.getMessage().contains("duplicate key value violates unique")) {
 				System.out.println("Attempted to add duplicate file.  Ignoring...");
 			} else {
@@ -125,9 +122,9 @@ public class FileDao {
 		return file;
 	}
 
-	public String addFile(UploadRequestDto uploadRequest) {
+	public SuccessDto addFile(UploadRequestDto uploadRequest) {
 
-		String outcome = null;
+		SuccessDto outcome = new SuccessDto(false);
 		try (Connection conn = DriverManager.getConnection(URL, USER, PW);) {
 
 			// delete a file with this name if it has expired
@@ -156,15 +153,14 @@ public class FileDao {
 			// REMEMBER executeUpdate for statements that don't have results
 			ResultSet results = prepared.executeQuery();
 			while (results.next()) {
-				outcome = String.format("Added a new file with id %d", results.getInt("id"));
+				outcome.setBool(true);
 			}
 
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			if (e.getMessage().contains("duplicate key value violates unique")) {
-				outcome = "File already exists.  Not adding new file.";
+				// pass
 			} else {
-				outcome = e.getMessage();
+				System.out.println(e.getMessage());
 			}
 
 		}
@@ -176,7 +172,6 @@ public class FileDao {
 		try {
 			Class.forName("org.postgresql.Driver");
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
