@@ -1,5 +1,6 @@
 package com.ftd.smartshare.client.commands.subcommands;
 
+import com.ftd.smartshare.client.api.Api;
 import com.ftd.smartshare.client.commands.SmartShare;
 import com.ftd.smartshare.dto.UploadRequestDto;
 import com.ftd.smartshare.utils.PasswordGenerator;
@@ -43,39 +44,24 @@ public class Upload implements Runnable {
 	private int maxDownloads = Integer.MAX_VALUE;
 
 	public void run() {
+		
+		if (expiration < 1) {
+			System.out.println("Expiration value less than 1 invalid.  Setting expiration to 1 minute");
+			expiration = 1;
+		} else if (expiration > 1440) {
+			System.out.println("Expiration value greater than 1440 invalid.  Setting expiration to 1440 minutes");
+			expiration = 1440;
+		}
+		
+		
 		System.out.println("Trying to upload: " + file.getAbsolutePath());
-		try (
-			InputStream fileIn = new FileInputStream(file);
-			Socket server = new Socket("localhost", 6770);
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(server.getOutputStream()));
-			BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()));
-
-				) {
+		try ( InputStream fileIn = new FileInputStream(file);) {
 			byte[] bytes = new byte[fileIn.available()];
 			fileIn.read(bytes);
 			UploadRequestDto uploadDto = new UploadRequestDto(this.file.getName(), this.password, bytes,
 					this.expiration, this.maxDownloads);
-
-			// Marshal request to stringWriter
-			JAXBContext context = JAXBContext.newInstance(UploadRequestDto.class);
-			Marshaller marshaller = context.createMarshaller();
-			StringWriter stringWriter = new StringWriter();
-			marshaller.marshal(uploadDto, stringWriter);
-			out.write(stringWriter.toString());
-			out.newLine();
-			out.flush();
-
-
-			String result = in.readLine();
-			if (!result.contains("already exists")) {
-				System.out.printf("Your password for %s is: \n",file.getName());
-				System.out.println(this.password);
-			} else {
-				System.out.println(result);
-			}
 			
-
-			
+			Api.upload(uploadDto);
 
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -83,15 +69,12 @@ public class Upload implements Runnable {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (JAXBException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 
 	}
 
 	public static void main(String[] args) {
-		CommandLine.run(new SmartShare(), "upload", "toUpload/test.txt", "poobear", "-m", "2");
+		CommandLine.run(new SmartShare(), "upload", "toUpload/test.txt", "poobear", "-e", "-1000", "-m", "2");
 	}
 
 }

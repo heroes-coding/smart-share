@@ -51,11 +51,8 @@ public class SmartShareServer {
 					if (request instanceof UploadRequestDto) {
 						 UploadHandler uploader = new UploadHandler(client, request);
 						 new Thread(uploader).start();
-
-
 					}
-					
-					
+							
 					
 				} catch (JAXBException e) {
 					e.printStackTrace();

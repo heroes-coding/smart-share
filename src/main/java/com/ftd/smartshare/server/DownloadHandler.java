@@ -30,10 +30,10 @@ public class DownloadHandler implements Runnable {
 		try {
 			FileDao fileDao = new FileDao();
 			DownloadRequestDto downloadRequest = (DownloadRequestDto) request;
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
+			// BufferedWriter out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
 			System.out.printf("Got a download request for %s!\n", downloadRequest.getFile_name());
 			FileDto fileDto = fileDao.getFileDto(downloadRequest);
-			marshaller.marshal(fileDto, out);
+			marshaller.marshal(fileDto, client.getOutputStream());
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();

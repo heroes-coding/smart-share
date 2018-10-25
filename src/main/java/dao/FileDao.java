@@ -19,7 +19,6 @@ public class FileDao {
 	private static final String USER = "postgres";
 	private static final String PW = "bondstone";
 
-	
 	public static void deleteFile(String fileName, Connection conn) {
 		String deleteSql = "DELETE FROM smartshare.files WHERE file_name = (?)";
 		PreparedStatement deleteStatement;
@@ -32,21 +31,53 @@ public class FileDao {
 			e.printStackTrace();
 		}
 	}
+
+	public static Long deleteIfExpiredAndGetRemainingMilliseconds(String fileName, Connection conn) {
+
+		Long remainingMillis = null;
+		try {
+			String sql = "SELECT expiry_time FROM smartshare.files WHERE file_name = (?)";
+			PreparedStatement prepared = conn.prepareStatement(sql);
+			prepared.setString(1, fileName);
+			prepared.executeQuery();
+			ResultSet results = prepared.getResultSet();
+			while (results.next()) {
+				Timestamp expirationTime = results.getTimestamp("expiry_time");
+				Timestamp now = new Timestamp(System.currentTimeMillis());
+				long remMs = expirationTime.getTime() - now.getTime();
+				remainingMillis = remMs; // autoboxing on
+				if (remMs < 0) {
+					deleteFile(fileName, conn);
+				}
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return remainingMillis;
+
+	}
+
 	public FileDto getFileDto(DownloadRequestDto request) {
 		// consider making this an atomic operation
 		// returns an empty file object if conditions are violated
 		FileDto file = new FileDto();
 		System.out.println(request);
 		try (Connection conn = DriverManager.getConnection(URL, USER, PW);) {
-			
+
 			String fileName = request.getFile_name();
+			Long remainingMillis = FileDao.deleteIfExpiredAndGetRemainingMilliseconds(fileName, conn);
+			if (remainingMillis == null || remainingMillis < 0) {
+				return file; // returns empty file
+			}
+
 			String sql;
 			if (request.isSummaryOnly()) {
-				sql = "SELECT expiry_time, time_created, max_downloads, total_downloads, file_name " +
-						"FROM smartshare.files WHERE file_name = (?) and password = (?)";
+				sql = "SELECT time_created, max_downloads, total_downloads, file_name "
+						+ "FROM smartshare.files WHERE file_name = (?) and password = (?)";
 			} else {
-				sql = "SELECT expiry_time, time_created, max_downloads, total_downloads, file_name, file " +
-						"FROM smartshare.files WHERE file_name = (?) and password = (?)";
+				sql = "SELECT time_created, max_downloads, total_downloads, file_name, file "
+						+ "FROM smartshare.files WHERE file_name = (?) and password = (?)";
 			}
 
 			PreparedStatement prepared = conn.prepareStatement(sql);
@@ -55,23 +86,22 @@ public class FileDao {
 			prepared.executeQuery();
 			ResultSet results = prepared.getResultSet();
 			while (results.next()) {
-				
-				Timestamp expirationTime = results.getTimestamp("expiry_time");
-				Timestamp now = new Timestamp(System.currentTimeMillis());
-				long remainingMillis = expirationTime.getTime() - now.getTime();
-				
+
 				int downloads = results.getInt("total_downloads");
 				int remainingDownloads = results.getInt("max_downloads") - downloads;
 				if (!request.isSummaryOnly()) {
 					remainingDownloads--;
 				}
-				
-				if (remainingMillis <= 0 || remainingDownloads < 0) {
+
+				file.setFileName(fileName);
+				file.setRemainingDownloads(remainingDownloads);
+				file.setTimeCreated(results.getTimestamp("time_created").getTime());
+				file.setTimeUntilExpiration(remainingMillis / 60000);
+
+				if (remainingDownloads <= 0) {
 					deleteFile(fileName, conn);
 					break; // breaks out of while loop which populates the rest of file object
-				} 
-
-				if (!request.isSummaryOnly()) {
+				} else if (!request.isSummaryOnly()) {
 					file.setFile(results.getBytes("file"));
 					String downsSql = "UPDATE smartshare.files SET total_downloads = (?) WHERE file_name = (?)";
 					PreparedStatement downsDecrementer = conn.prepareStatement(downsSql);
@@ -79,13 +109,9 @@ public class FileDao {
 					downsDecrementer.setString(2, fileName);
 					downsDecrementer.executeUpdate();
 				}
-				
-				file.setFileName(fileName);
-				file.setRemainingDownloads(remainingDownloads);
-				file.setTimeCreated(results.getTimestamp("time_created").getTime());
-				file.setTimeUntilExpiration(remainingMillis/60000);
+
 			}
-				
+
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			if (e.getMessage().contains("duplicate key value violates unique")) {
@@ -104,17 +130,22 @@ public class FileDao {
 		String outcome = null;
 		try (Connection conn = DriverManager.getConnection(URL, USER, PW);) {
 
+			// delete a file with this name if it has expired
+			String fileName = uploadRequest.getFile_name();
+			FileDao.deleteIfExpiredAndGetRemainingMilliseconds(fileName, conn);
+			
 			// Get times
 			Timestamp now = new Timestamp(System.currentTimeMillis());
-			Timestamp expiration = new Timestamp(System.currentTimeMillis() + 60*1000 * uploadRequest.getExpiry_time());
+			Timestamp expiration = new Timestamp(
+					System.currentTimeMillis() + 60 * 1000 * uploadRequest.getExpiry_time());
 
 			String sql = "INSERT into smartshare.files (file_name, file, time_created, expiry_time, max_downloads, total_downloads, password)"
 					+ " VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id";
-			
+
 			// file_name, file, time_created, expiry_time, max_downloads, total_downloads,
 			// password
 			PreparedStatement prepared = conn.prepareStatement(sql);
-			prepared.setString(1, uploadRequest.getFile_name());
+			prepared.setString(1, fileName);
 			prepared.setBytes(2, uploadRequest.getFile());
 			prepared.setTimestamp(3, now);
 			prepared.setTimestamp(4, expiration);
@@ -135,7 +166,6 @@ public class FileDao {
 			} else {
 				outcome = e.getMessage();
 			}
-			
 
 		}
 
