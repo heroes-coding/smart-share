@@ -9,6 +9,10 @@ public class File {
 	private String fileName;
 	private byte[] file;
 
+	/**
+	 * Saves the underlying file to a relative directory with the File's fileName
+	 * @param relativeDirectory
+	 */
 	public void saveFile(String relativeDirectory) {
 		try (FileOutputStream out = new FileOutputStream(relativeDirectory + "/" + this.fileName);) {
 			out.write(this.file);

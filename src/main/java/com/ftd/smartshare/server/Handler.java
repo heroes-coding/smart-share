@@ -6,6 +6,11 @@ import java.net.Socket;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 
+/***
+ * 
+ * An abstract class that handles the actual marshalling and sending of responses back to the client.
+ *
+ */
 public abstract class Handler {
 	private Socket client;
 	private Marshaller marshaller;

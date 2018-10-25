@@ -17,6 +17,11 @@ import com.ftd.smartshare.dto.UploadRequestDto;
 
 import entity.File;
 
+/***
+ * 
+ * An api for sending download and upload requests for files to a backend server
+ *
+ */
 public final class Api {
 
 	private static final String HOST = "localhost";

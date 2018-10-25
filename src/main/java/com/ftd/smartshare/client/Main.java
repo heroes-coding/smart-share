@@ -9,7 +9,7 @@ class Main {
 	public static void main(String[] args) {
 
 		// some tests
-		CommandLine.run(new SmartShare(), "upload", "toUpload/test.txt", "passwordeeeee", "-e", "590", "-m", "3");
+		CommandLine.run(new SmartShare(), "upload", "toUpload/test.txt", "passwordeeeee", "-e", "1", "-m", "3");
 		CommandLine.run(new SmartShare(), "upload", "toUpload/test2.txt", "passwordeeeee", "-e", "590", "-m", "3");	
 		CommandLine.run(new SmartShare(), "download", "toUpload/test.txt", "passwordeeeee", "-s");
 		CommandLine.run(new SmartShare(), "download", "test.txt", "passwordeeeee");
