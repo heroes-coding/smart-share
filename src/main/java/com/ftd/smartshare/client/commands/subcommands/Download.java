@@ -1,5 +1,7 @@
 package com.ftd.smartshare.client.commands.subcommands;
 
+import java.io.File;
+
 import com.ftd.smartshare.client.api.Api;
 import com.ftd.smartshare.dto.DownloadRequestDto;
 
@@ -22,6 +24,8 @@ public class Download implements Runnable {
 	private String relativeSaveFolder = "downloads";
 
 	public void run() {
+		
+		this.fileName = (new File(fileName)).getName(); // make sure name is a file name, and not a path + file name
 		System.out.println((this.summaryOnly ? "Getting file summary for " : "Trying to download ") + fileName + "...");
 		DownloadRequestDto downloadRequestDto = new DownloadRequestDto(this.fileName, this.password, this.summaryOnly,
 				this.relativeSaveFolder);

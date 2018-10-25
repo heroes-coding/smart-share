@@ -49,7 +49,7 @@ public final class Api {
 	public static boolean getFileSummary(DownloadRequestDto downloadRequestDto) {
 		FileDto fileDto = (FileDto) sendRequestGetResponse(downloadRequestDto);
 		if (fileDto.getFileName() == null) {
-			System.out.println("Could not get file.");
+			System.out.println("Could not get file summary.");
 			return false;
 		} else if (downloadRequestDto.isSummaryOnly()) {
 			int remainingDownloads = fileDto.getRemainingDownloads();

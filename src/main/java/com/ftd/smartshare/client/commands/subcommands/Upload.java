@@ -55,6 +55,7 @@ public class Upload implements Runnable {
 
 		} catch (FileNotFoundException e) {
 			System.out.println("File not found!");
+			return;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

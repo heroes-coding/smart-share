@@ -85,14 +85,8 @@ public class FileDao {
 
 				int downloads = results.getInt("total_downloads");
 				int remainingDownloads = results.getInt("max_downloads") - downloads;
-				if (!request.isSummaryOnly()) {
-					remainingDownloads--;
-				}
 
-				if (remainingDownloads < 0) {
-					deleteFile(fileName, conn);
-					return file; // returns empty file
-				} else if (!request.isSummaryOnly()) {
+				if (!request.isSummaryOnly()) {
 					file.setFile(results.getBytes("file"));
 					String downsSql = "UPDATE smartshare.files SET total_downloads = (?) WHERE file_name = (?)";
 					PreparedStatement downsDecrementer = conn.prepareStatement(downsSql);
@@ -106,7 +100,12 @@ public class FileDao {
 				file.setTimeCreated(results.getTimestamp("time_created").getTime());
 				file.setTimeUntilExpiration(1 + remainingMillis / 60000);
 
-				
+				if (!request.isSummaryOnly()) {
+					remainingDownloads--;
+					if (remainingDownloads <= 0) {
+						deleteFile(fileName, conn);
+					}
+				}
 
 			}
 
